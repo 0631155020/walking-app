@@ -3,7 +3,7 @@ import { Pedometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 import { Linking, AppState } from 'react-native';
 
-type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+type PermissionStatus = Location.PermissionStatus; // Can be: 'granted' | 'denied' | 'undetermined'
 
 interface UseActivityPermissionsOptions {
   pedometer?: boolean;
@@ -16,31 +16,24 @@ export const openAppSettings = () => {
 };
 
 export const useActivityPermissions = (options: UseActivityPermissionsOptions) => {
-  const [status, setStatus] = useState<PermissionStatus>('undetermined');
+  const [activityStatus, setActivityStatus] = useState<PermissionStatus>('undetermined');
+  const [locationStatus, setLocationStatus] = useState<PermissionStatus>('undetermined');
 
   const checkPermissions = useCallback(async () => {
-    const statuses: Location.PermissionStatus[] = [];
-
     if (options.pedometer) {
       const { status } = await Pedometer.getPermissionsAsync();
-      statuses.push(status);
+      setActivityStatus(status);
+    } else {
+      // If the component using this hook doesn't need this permission, treat it as granted.
+      setActivityStatus('granted');
     }
+
     if (options.location) {
       const { status } = await Location.getForegroundPermissionsAsync();
-      statuses.push(status);
-    }
-
-    if (statuses.length === 0) {
-      setStatus('granted'); // No permissions requested, so we're good.
-      return;
-    }
-
-    if (statuses.some(s => s === 'denied')) {
-      setStatus('denied');
-    } else if (statuses.every(s => s === 'granted')) {
-      setStatus('granted');
+      setLocationStatus(status);
     } else {
-      setStatus('undetermined');
+       // If the component using this hook doesn't need this permission, treat it as granted.
+      setLocationStatus('granted');
     }
   }, [options.pedometer, options.location]);
 
@@ -58,25 +51,18 @@ export const useActivityPermissions = (options: UseActivityPermissionsOptions) =
     };
   }, [checkPermissions]);
 
-  const requestPermissionsAsync = async (): Promise<PermissionStatus> => {
-    let allGranted = true;
-
+  const requestPermissionsAsync = async () => {
+    // Request all permissions that this instance of the hook is configured for
     if (options.pedometer) {
-      const { status } = await Pedometer.requestPermissionsAsync();
-      if (status !== 'granted') allGranted = false;
+      await Pedometer.requestPermissionsAsync();
     }
-
     if (options.location) {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') allGranted = false;
+      await Location.requestForegroundPermissionsAsync();
     }
 
-    // After requesting, re-check the actual state from the system
+    // After attempting to get permissions, re-check the latest status from the OS
     await checkPermissions();
-    const finalStatus = allGranted ? 'granted' : 'denied';
-
-    return finalStatus;
   };
 
-  return { status, requestPermissionsAsync };
+  return { activityStatus, locationStatus, requestPermissionsAsync };
 };

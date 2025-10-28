@@ -4,8 +4,9 @@ import { Pedometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 import { useActivityPermissions, openAppSettings } from '../lib/useActivityPermissions';
 
+// Haversine formula to calculate distance between two lat/lon points
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371e3; // metres
+  const R = 6371e3; // Earth radius in metres
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -17,7 +18,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 const WorkoutScreen = () => {
   // This component needs both pedometer and location permissions.
-  const { status, requestPermissionsAsync } = useActivityPermissions({ pedometer: true, location: true });
+  // We get the detailed status for each.
+  const { activityStatus, locationStatus, requestPermissionsAsync } = useActivityPermissions({ pedometer: true, location: true });
 
   const [isTracking, setIsTracking] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -32,6 +34,8 @@ const WorkoutScreen = () => {
 
   const lastLocation = useRef<Location.LocationObject | null>(null);
 
+  const arePermissionsGranted = activityStatus === 'granted' && locationStatus === 'granted';
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isTracking && startTime) {
@@ -43,17 +47,25 @@ const WorkoutScreen = () => {
   }, [isTracking, startTime]);
 
   const handleStartWorkout = async () => {
-    if (status !== 'granted') {
-      if (status === 'denied') {
+    if (!arePermissionsGranted) {
+      const isDenied = activityStatus === 'denied' || locationStatus === 'denied';
+      if (isDenied) {
+        let message = "To track workouts, we need access to your ";
+        const needed = [];
+        if (activityStatus !== 'granted') needed.push("Physical Activity");
+        if (locationStatus !== 'granted') needed.push("Location");
+        message += needed.join(' and ') + ". Please enable these in your settings.";
+
         Alert.alert(
           "Permissions Required",
-          "Full workout tracking requires both Physical Activity and Location permissions. Please enable them in your settings.",
+          message,
           [
             { text: "Cancel", style: "cancel" },
             { text: "Open Settings", onPress: () => openAppSettings() }
           ]
         );
       } else {
+        // This handles the 'undetermined' case
         await requestPermissionsAsync();
       }
       return;
@@ -120,7 +132,7 @@ const WorkoutScreen = () => {
       ) : (
          <View style={styles.metricsContainer}>
             <Text style={styles.metricText}>Начните новую тренировку</Text>
-            {status !== 'granted' && (
+            {!arePermissionsGranted && (
                 <Text style={styles.permissionWarning}>Требуются разрешения</Text>
             )}
          </View>
