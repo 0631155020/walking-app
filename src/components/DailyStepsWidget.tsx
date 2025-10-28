@@ -46,8 +46,8 @@ const DailyStepsWidget = () => {
       case 'denied':
         return (
           <View style={styles.centered}>
-            <Text style={styles.text}>Permission to access activity data is denied.</Text>
-            <Text style={styles.subText}>Please enable it in your settings.</Text>
+            <Text style={styles.text}>Permission for Physical Activity denied.</Text>
+            <Text style={styles.subText}>Step counting requires this permission. Please enable it in your settings.</Text>
             <Button title="Open Settings" onPress={handlePermissionRequest} />
           </View>
         );
@@ -55,7 +55,7 @@ const DailyStepsWidget = () => {
         return (
            <View style={styles.centered}>
              <Text style={styles.text}>Track your daily steps</Text>
-             <Button title="Grant Permission" onPress={handlePermissionRequest} />
+             <Button title="Enable Step Counter" onPress={handlePermissionRequest} />
            </View>
         );
     }

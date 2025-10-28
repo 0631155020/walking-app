@@ -47,7 +47,7 @@ const WorkoutScreen = () => {
       if (status === 'denied') {
         Alert.alert(
           "Permissions Required",
-          "To track a workout, we need access to your activity and location data. Please enable these in your settings.",
+          "Full workout tracking requires both Physical Activity and Location permissions. Please enable them in your settings.",
           [
             { text: "Cancel", style: "cancel" },
             { text: "Open Settings", onPress: () => openAppSettings() }
